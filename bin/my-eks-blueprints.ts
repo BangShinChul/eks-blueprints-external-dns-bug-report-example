@@ -11,10 +11,16 @@ import { demoApplicationDeploy } from "../lib/utils/deploy-demo-application";
 
 const app = new cdk.App();
 
-const myEnv = { account: "000000000000", region: "ap-northeast-2" }; // Edit it according to your account
+const account = process.env.CDK_DEPLOY_ACCOUNT || process.env.CDK_DEFAULT_ACCOUNT;
+const region = process.env.CDK_DEPLOY_REGION || process.env.CDK_DEFAULT_REGION;
+
+console.log("account : " + account);
+console.log("region : " + region);
 
 new RequestClientStack(app, "request-client-stack", {
-  env: myEnv,
+  env: {
+    region: region,
+  },
   allowedCidrs: ["127.0.0.1/32"],
   webUsername: "awsuser",
   webPassword: "passw0rd",
@@ -33,7 +39,7 @@ const addOns: Array<blueprints.ClusterAddOn> = [
     ],
   }),
   new blueprints.addons.ClusterAutoScalerAddOn(),
-  new blueprints.addons.CoreDnsAddOn("v1.10.1-eksbuild.1"),
+  new blueprints.addons.CoreDnsAddOn(),
   new blueprints.addons.KubeProxyAddOn("v1.27.1-eksbuild.1"),
   new blueprints.addons.ExternalDnsAddOn({
     hostedZoneResources: ["my-cluster-hosted-zone"],
@@ -41,8 +47,8 @@ const addOns: Array<blueprints.ClusterAddOn> = [
 ];
 
 const myCluster = blueprints.EksBlueprint.builder()
-  .account(myEnv.account)
-  .region(myEnv.region)
+  .account(account)
+  .region(region)
   .addOns(...addOns)
   .name("my-cluster")
   .version(eks.KubernetesVersion.V1_27)
@@ -57,9 +63,9 @@ const myCluster = blueprints.EksBlueprint.builder()
         return new ec2.Vpc(context.scope, "my-cluster-vpc", {
           ipAddresses: ec2.IpAddresses.cidr("172.51.0.0/16"),
           availabilityZones: [
-            `${myEnv.region}a`,
-            `${myEnv.region}b`,
-            `${myEnv.region}c`,
+            `${region}a`,
+            `${region}b`,
+            `${region}c`,
           ],
           subnetConfiguration: [
             {
@@ -74,7 +80,7 @@ const myCluster = blueprints.EksBlueprint.builder()
             },
           ],
           natGatewaySubnets: {
-            availabilityZones: [`${myEnv.region}c`],
+            availabilityZones: [`${region}c`],
             subnetType: ec2.SubnetType.PUBLIC,
           },
         });
